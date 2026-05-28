@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLACIA Speed Test</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --glass-fill: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --glass-highlight: rgba(255, 255, 255, 0.12);
+            --cyan-accent: #00e5ff;
+            --cyan-glow: rgba(0, 229, 255, 0.4);
+            --cyan-dim: rgba(0, 229, 255, 0.15);
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-tertiary: rgba(255, 255, 255, 0.35);
+            --bg-deep: #0a0e1a;
+            --bg-mid: #0f1525;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-deep);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: var(--text-primary);
+        }
+
+        /* Animated background mesh */
+        .bg-mesh {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 40%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at 80% 60%, rgba(100, 200, 255, 0.05) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 150, 255, 0.03) 0%, transparent 70%);
+            animation: meshShift 20s ease-in-out infinite;
+        }
+
+        @keyframes meshShift {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(2%, -1%) scale(1.02); }
+            66% { transform: translate(-1%, 2%) scale(0.98); }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--cyan-accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: floatParticle 8s ease-in-out infinite;
+        }
+
+        @keyframes floatParticle {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.3; }
+            100% { opacity: 0; transform: translateY(-20vh) scale(1.5); }
+        }
+
+        /* Main container */
+        .app {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 520px;
+            padding: 24px;
+        }
+
+        /* Glass card base */
+        .glass {
+            background: var(--glass-fill);
+            backdrop-filter: blur(40px) saturate(1.2);
+            -webkit-backdrop-filter: blur(40px) saturate(1.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 32px 24px 16px;
+        }
+
+        .logo {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--cyan-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Gauge section */
+        .gauge-section {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+        }
+
+        .gauge-svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .gauge-track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.06);
+            stroke-width: 12;
+            stroke-linecap: round;
+        }
+
+        .gauge-fill {
+            fill: none;
+            stroke: url(#gaugeGradient);
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 691;
+            stroke-dashoffset: 691;
+            transition: stroke-dashoffset 0.15s ease-out;
+            filter: drop-shadow(0 0 12px var(--cyan-glow));
+        }
+
+        .gauge-glow {
+            fill: none;
+            stroke: var(--cyan-accent);
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-dasharray: 691;
+            stroke-dashoffset: 691;
+            opacity: 0.3;
+            filter: blur(8px);
+            transition: stroke-dashoffset 0.15s ease-out;
+        }
+
+        .gauge-inner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .speed-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--text-primary);
+            text-shadow: 0 0 30px var(--cyan-glow);
+            transition: text-shadow 0.3s ease;
+        }
+
+        .speed-value.active {
+            text-shadow: 0 0 40px var(--cyan-glow), 0 0 80px var(--cyan-dim);
+        }
+
+        .speed-unit {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .speed-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            margin-top: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Phase indicator */
+        .phase-indicator {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+            align-items: center;
+        }
+
+        .phase-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            transition: all 0.4s ease;
+        }
+
+        .phase-dot.active {
+            background: var(--cyan-accent);
+            box-shadow: 0 0 12px var(--cyan-glow);
+            width: 24px;
+            border-radius: 3px;
+        }
+
+        .phase-dot.complete {
+            background: var(--cyan-accent);
+            box-shadow: 0 0 8px var(--cyan-dim);
+        }
+
+        .phase-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-left: 4px;
+            min-width: 80px;
+            transition: color 0.3s ease;
+        }
+
+        .phase-label.active {
+            color: var(--cyan-accent);
+        }
+
+        /* Start button */
+        .btn-container {
+            padding: 16px 24px 32px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-start {
+            position: relative;
+            padding: 16px 48px;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--bg-deep);
+            background: linear-gradient(135deg, var(--cyan-accent), #00b8d4);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px var(--cyan-glow), 0 0 0 0 var(--cyan-dim);
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--cyan-glow), 0 0 0 4px var(--cyan-dim);
+        }
+
+        .btn-start:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-start:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-start.testing {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            color: var(--text-secondary);
+            box-shadow: none;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 0 24px 24px;
+        }
+
+        .stat-card {
+            background: var(--glass-fill);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px 12px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }
+
+        .stat-card.active {
+            border-color: rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 20px var(--cyan-dim);
+        }
+
+        .stat-icon {
+            font-size: 18px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .stat-unit {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        /* Server info */
+        .server-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 0 24px 24px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .server-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.4);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.8); }
+        }
+
+        /* Data particles during test */
+        .data-particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .data-particles.active {
+            opacity: 1;
+        }
+
+        .data-particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--cyan-accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: dataFlow 1.5s ease-out infinite;
+        }
+
+        @keyframes dataFlow {
+            0% { opacity: 0; transform: translateX(-20px) scale(0); }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.4; }
+            100% { opacity: 0; transform: translateX(200px) scale(1); }
+        }
+
+        /* Result summary */
+        .result-summary {
+            padding: 0 24px 24px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease;
+        }
+
+        .result-summary.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-grade {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .result-grade.excellent { color: #4ade80; text-shadow: 0 0 12px rgba(74, 222, 128, 0.3); }
+        .result-grade.good { color: #fbbf24; text-shadow: 0 0 12px rgba(251, 191, 36, 0.3); }
+        .result-grade.fair { color: #fb923c; text-shadow: 0 0 12px rgba(251, 146, 60, 0.3); }
+        .result-grade.poor { color: #f87171; text-shadow: 0 0 12px rgba(248, 113, 113, 0.3); }
+
+        .result-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .gauge-container {
+                width: 220px;
+                height: 220px;
+            }
+            .speed-value {
+                font-size: 44px;
+            }
+            .stats-grid {
+                gap: 8px;
+                padding: 0 16px 20px;
+            }
+            .stat-value {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-mesh"></div>
+    <div class="particles" id="bgParticles"></div>
+
+    <div class="app">
+        <div class="glass">
+            <div class="header">
+                <div class="logo">GLACIA</div>
+                <div class="title">Speed Test</div>
+            </div>
+
+            <div class="gauge-section">
+                <div class="gauge-container">
+                    <svg class="gauge-svg" viewBox="0 0 240 240">
+                        <defs>
+                            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#00e5ff" />
+                                <stop offset="100%" stop-color="#00b8d4" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="gauge-track" cx="120" cy="120" r="110" />
+                        <circle class="gauge-glow" cx="120" cy="120" r="110" />
+                        <circle class="gauge-fill" cx="120" cy="120" r="110" />
+                    </svg>
+                    <div class="gauge-inner">
+                        <div class="speed-value" id="mainSpeed">0.0</div>
+                        <div class="speed-unit" id="mainUnit">Mbps</div>
+                        <div class="speed-label" id="mainLabel">Download</div>
+                    </div>
+                    <div class="data-particles" id="dataParticles"></div>
+                </div>
+
+                <div class="phase-indicator">
+                    <div class="phase-dot" id="dotPing"></div>
+                    <div class="phase-label" id="labelPing">Ping</div>
+                    <div class="phase-dot" id="dotDownload"></div>
+                    <div class="phase-label" id="labelDownload">Download</div>
+                    <div class="phase-dot" id="dotUpload"></div>
+                    <div class="phase-label" id="labelUpload">Upload</div>
+                </div>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn-start" id="btnStart" onclick="startTest()">Start Test</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" id="cardDownload">
+                    <div class="stat-icon">↓</div>
+                    <div class="stat-value" id="valDownload">—</div>
+                    <div class="stat-unit">Mbps</div>
+                    <div class="stat-label">Download</div>
+                </div>
+                <div class="stat-card" id="cardUpload">
+                    <div class="stat-icon">↑</div>
+                    <div class="stat-value" id="valUpload">—</div>
+                    <div class="stat-unit">Mbps</div>
+                    <div class="stat-label">Upload</div>
+                </div>
+                <div class="stat-card" id="cardPing">
+                    <div class="stat-icon">◉</div>
+                    <div class="stat-value" id="valPing">—</div>
+                    <div class="stat-unit">ms</div>
+                    <div class="stat-label">Ping</div>
+                </div>
+            </div>
+
+            <div class="server-info">
+                <div class="server-dot"></div>
+                <span>Server: Auto — <span id="serverLocation">Detecting...</span></span>
+            </div>
+
+            <div class="result-summary" id="resultSummary">
+                <div class="result-grade" id="resultGrade"></div>
+                <div class="result-text" id="resultText"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Background particles
+        const bgParticles = document.getElementById('bgParticles');
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 8 + 's';
+            p.style.animationDuration = (6 + Math.random() * 6) + 's';
+            bgParticles.appendChild(p);
+        }
+
+        // Data particles for test
+        const dataParticles = document.getElementById('dataParticles');
+        for (let i = 0; i < 15; i++) {
+            const p = document.createElement('div');
+            p.className = 'data-particle';
+            p.style.top = (10 + Math.random() * 80) + '%';
+            p.style.animationDelay = Math.random() * 1.5 + 's';
+            dataParticles.appendChild(p);
+        }
+
+        // Server detection
+        const servers = [
+            'New York, NY', 'Los Angeles, CA', 'Chicago, IL', 'Dallas, TX',
+            'Miami, FL', 'Seattle, WA', 'London, UK', 'Frankfurt, DE',
+            'Tokyo, JP', 'Singapore, SG', 'Sydney, AU', 'São Paulo, BR'
+        ];
+        document.getElementById('serverLocation').textContent = servers[Math.floor(Math.random() * servers.length)];
+
+        // Elements
+        const btnStart = document.getElementById('btnStart');
+        const mainSpeed = document.getElementById('mainSpeed');
+        const mainUnit = document.getElementById('mainUnit');
+        const mainLabel = document.getElementById('mainLabel');
+        const gaugeFill = document.querySelector('.gauge-fill');
+        const gaugeGlow = document.querySelector('.gauge-glow');
+        const valDownload = document.getElementById('valDownload');
+        const valUpload = document.getElementById('valUpload');
+        const valPing = document.getElementById('valPing');
+        const cardDownload = document.getElementById('cardDownload');
+        const cardUpload = document.getElementById('cardUpload');
+        const cardPing = document.getElementById('cardPing');
+        const resultSummary = document.getElementById('resultSummary');
+        const resultGrade = document.getElementById('resultGrade');
+        const resultText = document.getElementById('resultText');
+
+        const dots = {
+            ping: document.getElementById('dotPing'),
+            download: document.getElementById('dotDownload'),
+            upload: document.getElementById('dotUpload')
+        };
+        const labels = {
+            ping: document.getElementById('labelPing'),
+            download: document.getElementById('labelDownload'),
+            upload: document.getElementById('labelUpload')
+        };
+
+        const CIRCUMFERENCE = 2 * Math.PI * 110; // ~691
+        let isTesting = false;
+
+        function setGauge(percent) {
+            const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
+            gaugeFill.style.strokeDashoffset = offset;
+            gaugeGlow.style.strokeDashoffset = offset;
+        }
+
+        function setPhase(phase) {
+            Object.keys(dots).forEach(key => {
+                dots[key].classList.remove('active', 'complete');
+                labels[key].classList.remove('active');
+            });
+
+            const order = ['ping', 'download', 'upload'];
+            const idx = order.indexOf(phase);
+
+            for (let i = 0; i < idx; i++) {
+                dots[order[i]].classList.add('complete');
+            }
+            dots[phase].classList.add('active');
+            labels[phase].classList.add('active');
+        }
+
+        function scrambleNumber(element, target, duration = 800, suffix = '') {
+            const start = parseFloat(element.textContent) || 0;
+            const startTime = performance.now();
+
+            function update(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = start + (target - start) * eased;
+
+                if (target < 10) {
+                    element.textContent = current.toFixed(1) + suffix;
+                } else if (target < 100) {
+                    element.textContent = current.toFixed(1) + suffix;
+                } else {
+                    element.textContent = Math.round(current) + suffix;
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    if (target < 10) {
+                        element.textContent = target.toFixed(1) + suffix;
+                    } else if (target < 100) {
+                        element.textContent = target.toFixed(1) + suffix;
+                    } else {
+                        element.textContent = Math.round(target) + suffix;
+                    }
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        function animateGaugeTo(targetPercent, duration = 1500) {
+            const startPercent = 100 - (parseFloat(gaugeFill.style.strokeDashoffset) / CIRCUMFERENCE * 100);
+            const startTime = performance.now();
+
+            function update(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = startPercent + (targetPercent - startPercent) * eased;
+                setGauge(current);
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        function generateRealisticSpeed(baseSpeed, variance = 0.3) {
+            const jitter = (Math.random() - 0.5) * 2 * variance;
+            return Math.max(0.5, baseSpeed * (1 + jitter));
+        }
+
+        async function simulatePhase(phaseName, duration, baseSpeed, cardElement, valueElement, unit, isGauge = true) {
+            setPhase(phaseName);
+            if (cardElement) cardElement.classList.add('active');
+
+            const startTime = performance.now();
+            const readings = [];
+
+            return new Promise(resolve => {
+                function tick() {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Ramp up then settle
+                    let rampFactor;
+                    if (progress < 0.3) {
+                        rampFactor = progress / 0.3;
+                        rampFactor = rampFactor * rampFactor; // ease in
+                    } else if (progress < 0.7) {
+                        rampFactor = 1;
+                    } else {
+                        rampFactor = 1 - ((progress - 0.7) / 0.3) * 0.3;
+                    }
+
+                    const currentSpeed = generateRealisticSpeed(baseSpeed * rampFactor);
+                    readings.push(currentSpeed);
+
+                    if (isGauge) {
+                        const gaugePercent = Math.min((currentSpeed / 1000) * 100, 100);
+                        setGauge(gaugePercent);
+                        mainSpeed.textContent = currentSpeed < 100 ? currentSpeed.toFixed(1) : Math.round(currentSpeed);
+                    }
+
+                    if (progress < 1) {
+                        requestAnimationFrame(tick);
+                    } else {
+                        // Final value: average of last 30% of readings
+                        const finalReadings = readings.slice(Math.floor(readings.length * 0.7));
+                        const final = finalReadings.reduce((a, b) => a + b, 0) / finalReadings.length;
+
+                        if (isGauge) {
+                            const finalGauge = Math.min((final / 1000) * 100, 100);
+                            setGauge(finalGauge);
+                            mainSpeed.textContent = final < 100 ? final.toFixed(1) : Math.round(final);
+                        }
+
+                        if (cardElement) cardElement.classList.remove('active');
+                        scrambleNumber(valueElement, final, 600);
+                        resolve(final);
+                    }
+                }
+                requestAnimationFrame(tick);
+            });
+        }
+
+        async function startTest() {
+            if (isTesting) return;
+            isTesting = true;
+
+            // Reset UI
+            btnStart.disabled = true;
+            btnStart.textContent = 'Testing...';
+            btnStart.classList.add('testing');
+            resultSummary.classList.remove('show');
+            mainSpeed.classList.add('active');
+            dataParticles.classList.add('active');
+
+            valDownload.textContent = '—';
+            valUpload.textContent = '—';
+            valPing.textContent = '—';
+
+            setGauge(0);
+            mainLabel.textContent = 'Ping';
+            mainUnit.textContent = 'ms';
+            mainSpeed.textContent = '0';
+
+            // Generate realistic base speeds based on connection quality
+            const qualityRoll = Math.random();
+            let baseDownload, baseUpload, basePing;
+
+            if (qualityRoll > 0.85) {
+                // Excellent fiber
+                baseDownload = 800 + Math.random() * 400;
+                baseUpload = 600 + Math.random() * 300;
+                basePing = 5 + Math.random() * 8;
+            } else if (qualityRoll > 0.5) {
+                // Good cable/fiber
+                baseDownload = 200 + Math.random() * 300;
+                baseUpload = 50 + Math.random() * 100;
+                basePing = 10 + Math.random() * 15;
+            } else if (qualityRoll > 0.2) {
+                // Average DSL/cable
+                baseDownload = 50 + Math.random() * 100;
+                baseUpload = 10 + Math.random() * 20;
+                basePing = 20 + Math.random() * 20;
+            } else {
+                // Poor connection
+                baseDownload = 5 + Math.random() * 20;
+                baseUpload = 2 + Math.random() * 5;
+                basePing = 40 + Math.random() * 40;
+            }
+
+            // Phase 1: Ping
+            await simulatePhase('ping', 2000, basePing, cardPing, valPing, 'ms', false);
+            await new Promise(r => setTimeout(r, 400));
+
+            // Phase 2: Download
+            mainLabel.textContent = 'Download';
+            mainUnit.textContent = 'Mbps';
+            const downloadResult = await simulatePhase('download', 3500, baseDownload, cardDownload, valDownload, 'Mbps');
+            await new Promise(r => setTimeout(r, 400));
+
+            // Phase 3: Upload
+            mainLabel.textContent = 'Upload';
+            const uploadResult = await simulatePhase('upload', 3500, baseUpload, cardUpload, valUpload, 'Mbps');
+
+            // Finish
+            mainSpeed.classList.remove('active');
+            dataParticles.classList.remove('active');
+            setGauge(0);
+            mainLabel.textContent = 'Complete';
+            mainUnit.textContent = '';
+            mainSpeed.textContent = '✓';
+
+            Object.keys(dots).forEach(k => {
+                dots[k].classList.remove('active');
+                dots[k].classList.add('complete');
+            });
+
+            // Results summary
+            let grade, gradeClass, text;
+            if (downloadResult > 500) {
+                grade = 'Excellent';
+                gradeClass = 'excellent';
+                text = `Your connection is blazing fast! You can stream 4K video on multiple devices simultaneously, download large files in seconds, and enjoy lag-free gaming.`;
+            } else if (downloadResult > 100) {
+                grade = 'Very Good';
+                gradeClass = 'good';
+                text = `Great connection speed! Perfect for HD streaming, video calls, and fast downloads. Multiple users can browse comfortably at the same time.`;
+            } else if (downloadResult > 25) {
+                grade = 'Good';
+                gradeClass = 'fair';
+                text = `Decent speed for everyday use. You can stream HD video and browse smoothly, though large downloads may take a few minutes.`;
+            } else {
+                grade = 'Slow';
+                gradeClass = 'poor';
+                text = `Your connection is on the slower side. Basic browsing works, but streaming and downloads will be limited. Consider upgrading your plan.`;
+            }
+
+            resultGrade.textContent = grade;
+            resultGrade.className = 'result-grade ' + gradeClass;
+            resultText.textContent = text;
+            resultSummary.classList.add('show');
+
+            // Reset button
+            btnStart.disabled = false;
+            btnStart.textContent = 'Test Again';
+            btnStart.classList.remove('testing');
+            isTesting = false;
+        }
+
+        // Initial gauge setup
+        setGauge(0);
+    </script>
+</body>
+</html>
